@@ -1,4 +1,4 @@
-export type Submission = {
+export type PromptSubmission = {
 	id: string;
 	createdAt: string;
 	title: string;
@@ -9,4 +9,6 @@ export type Submission = {
 	xUsername: string | null;
 	customAvatarUrl: string | null;
 	likeCount: number;
+	toolUsed?: string | null;
+	modelUsed?: string | null;
 };

@@ -1,6 +1,5 @@
-import type {_InternalTypes} from 'remotion';
+import type {AnyComposition, AnyZodObject} from 'remotion';
 import {Internals, getRemotionEnvironment} from 'remotion';
-import type {AnyZodObject} from 'zod';
 
 export type UpdateDefaultPropsFunction = (currentValues: {
 	schema: AnyZodObject | null;
@@ -12,7 +11,7 @@ export const calcNewProps = (
 	compositionId: string,
 	defaultProps: UpdateDefaultPropsFunction,
 ): {
-	composition: _InternalTypes['AnyComposition'];
+	composition: AnyComposition;
 	generatedDefaultProps: Record<string, unknown>;
 } => {
 	if (!getRemotionEnvironment().isStudio) {

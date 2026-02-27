@@ -1,7 +1,6 @@
 import type {WrappedAudioBuffer} from 'mediabunny';
 import {roundTo4Digits} from '../helpers/round-to-4-digits';
 import type {PrewarmedAudioIteratorCache} from '../prewarm-iterator-for-looping';
-import {allowWaitRoutine, type AllowWait} from './allow-wait';
 
 export const HEALTHY_BUFFER_THRESHOLD_SECONDS = 1;
 
@@ -9,6 +8,7 @@ export type QueuedNode = {
 	node: AudioBufferSourceNode;
 	timestamp: number;
 	buffer: AudioBuffer;
+	maxDuration: number | null;
 };
 
 export const makeAudioIterator = (
@@ -21,8 +21,11 @@ export const makeAudioIterator = (
 	const audioChunksForAfterResuming: {
 		buffer: AudioBuffer;
 		timestamp: number;
+		maxDuration: number | null;
 	}[] = [];
 	let mostRecentTimestamp = -Infinity;
+	let pendingNext: Promise<IteratorResult<WrappedAudioBuffer, void>> | null =
+		null;
 
 	const cleanupAudioQueue = () => {
 		for (const node of queuedAudioNodes) {
@@ -32,18 +35,23 @@ export const makeAudioIterator = (
 		queuedAudioNodes.length = 0;
 	};
 
-	const getNextOrNullIfNotAvailable = async (allowWait: AllowWait | null) => {
-		const next = iterator.next();
-		const result = allowWait
-			? await allowWaitRoutine(next, allowWait)
-			: await Promise.race([
-					next,
-					new Promise<void>((resolve) => {
-						Promise.resolve().then(() => resolve());
-					}),
-				]);
+	const getNextOrNullIfNotAvailable = async () => {
+		let next = pendingNext;
+
+		if (!next) {
+			next = iterator.next();
+		}
+
+		pendingNext = null;
+		const result = await Promise.race([
+			next,
+			new Promise<void>((resolve) => {
+				Promise.resolve().then(() => resolve());
+			}),
+		]);
 
 		if (!result) {
+			pendingNext = next;
 			return {
 				type: 'need-to-wait-for-it' as const,
 				waitPromise: async () => {
@@ -58,6 +66,8 @@ export const makeAudioIterator = (
 				mostRecentTimestamp,
 				result.value.timestamp + result.value.duration,
 			);
+			// preload next already
+			pendingNext = iterator.next();
 			return {
 				type: 'got-buffer' as const,
 				buffer: result.value,
@@ -72,7 +82,6 @@ export const makeAudioIterator = (
 
 	const tryToSatisfySeek = async (
 		time: number,
-		allowWait: AllowWait | null,
 		onBufferScheduled: (buffer: WrappedAudioBuffer) => void,
 	): Promise<
 		| {
@@ -94,7 +103,7 @@ export const makeAudioIterator = (
 		}
 
 		while (true) {
-			const buffer = await getNextOrNullIfNotAvailable(allowWait);
+			const buffer = await getNextOrNullIfNotAvailable();
 			if (buffer.type === 'need-to-wait-for-it') {
 				return {
 					type: 'not-satisfied' as const,
@@ -146,6 +155,33 @@ export const makeAudioIterator = (
 		}
 	};
 
+	const bufferAsFarAsPossible = async (
+		onBufferScheduled: (buffer: WrappedAudioBuffer) => void,
+		maxTimestamp: number,
+	): Promise<{type: 'ended'} | {type: 'waiting'} | {type: 'max-reached'}> => {
+		while (true) {
+			if (mostRecentTimestamp >= maxTimestamp) {
+				return {type: 'max-reached'};
+			}
+
+			const buffer = await getNextOrNullIfNotAvailable();
+			if (buffer.type === 'need-to-wait-for-it') {
+				return {type: 'waiting'};
+			}
+
+			if (buffer.type === 'got-end') {
+				return {type: 'ended'};
+			}
+
+			if (buffer.type === 'got-buffer') {
+				onBufferScheduled(buffer.buffer);
+				continue;
+			}
+
+			throw new Error('Unreachable');
+		}
+	};
+
 	const removeAndReturnAllQueuedAudioNodes = () => {
 		const nodes = queuedAudioNodes.slice();
 		for (const node of nodes) {
@@ -156,14 +192,22 @@ export const makeAudioIterator = (
 		return nodes;
 	};
 
-	const addChunkForAfterResuming = (buffer: AudioBuffer, timestamp: number) => {
-		audioChunksForAfterResuming.push({buffer, timestamp});
+	const addChunkForAfterResuming = (
+		buffer: AudioBuffer,
+		timestamp: number,
+		maxDuration: number | null,
+	) => {
+		audioChunksForAfterResuming.push({buffer, timestamp, maxDuration});
 	};
 
 	const moveQueuedChunksToPauseQueue = () => {
 		const toQueue = removeAndReturnAllQueuedAudioNodes();
 		for (const chunk of toQueue) {
-			addChunkForAfterResuming(chunk.buffer, chunk.timestamp);
+			addChunkForAfterResuming(
+				chunk.buffer,
+				chunk.timestamp,
+				chunk.maxDuration,
+			);
 		}
 	};
 
@@ -196,8 +240,9 @@ export const makeAudioIterator = (
 			node: AudioBufferSourceNode,
 			timestamp: number,
 			buffer: AudioBuffer,
+			maxDuration: number | null,
 		) => {
-			queuedAudioNodes.push({node, timestamp, buffer});
+			queuedAudioNodes.push({node, timestamp, buffer, maxDuration});
 		},
 		removeQueuedAudioNode: (node: AudioBufferSourceNode) => {
 			const index = queuedAudioNodes.findIndex((n) => n.node === node);
@@ -234,6 +279,7 @@ export const makeAudioIterator = (
 			};
 		},
 		tryToSatisfySeek,
+		bufferAsFarAsPossible,
 		addChunkForAfterResuming,
 		moveQueuedChunksToPauseQueue,
 		getNumberOfChunksAfterResuming,

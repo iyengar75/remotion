@@ -1,6 +1,8 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
+import type {SequenceSchema} from 'remotion';
 import {
 	AbsoluteFill,
+	Internals,
 	Sequence,
 	useCurrentFrame,
 	useDelayRender,
@@ -229,12 +231,33 @@ const LightLeakCanvas: React.FC<{
  * @description Renders a WebGL-based light leak effect as a Sequence.
  * @see [Documentation](https://www.remotion.dev/docs/light-leaks/light-leak)
  */
+const lightLeakSchema = {
+	seed: {type: 'number', description: 'Seed'},
+	hueShift: {
+		type: 'number',
+		min: 0,
+		max: 360,
+		description: 'Hue Shift',
+	},
+	from: {type: 'number', description: 'From'},
+} as const satisfies SequenceSchema;
+
 export const LightLeak: React.FC<LightLeakProps> = ({
-	seed = 0,
-	hueShift = 0,
+	seed: seedProp = 0,
+	hueShift: hueShiftProp = 0,
 	durationInFrames,
+	from: fromProp,
 	...sequenceProps
 }) => {
+	const {
+		controls,
+		values: {seed, hueShift, from},
+	} = Internals.useSchema(lightLeakSchema, {
+		seed: seedProp,
+		hueShift: hueShiftProp,
+		from: fromProp,
+	});
+
 	const {durationInFrames: videoDuration} = useVideoConfig();
 	const resolvedDuration = durationInFrames ?? videoDuration;
 	if (typeof seed !== 'number' || !Number.isFinite(seed)) {
@@ -256,8 +279,18 @@ export const LightLeak: React.FC<LightLeakProps> = ({
 	}
 
 	return (
-		<Sequence durationInFrames={resolvedDuration} {...sequenceProps}>
+		<Sequence
+			durationInFrames={resolvedDuration}
+			name="<LightLeak>"
+			controls={controls}
+			from={from}
+			{...sequenceProps}
+		>
 			<LightLeakCanvas seed={seed} hueShift={hueShift} />
 		</Sequence>
 	);
 };
+
+LightLeak.displayName = 'LightLeak';
+
+Internals.addSequenceStackTraces(LightLeak);

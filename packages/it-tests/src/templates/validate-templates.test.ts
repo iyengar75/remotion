@@ -1,7 +1,7 @@
 import {describe, expect, it} from 'bun:test';
-import {CreateVideoInternals, Template} from 'create-video';
 import {existsSync, readFileSync} from 'node:fs';
 import path from 'node:path';
+import {CreateVideoInternals, Template} from 'create-video';
 
 const {FEATURED_TEMPLATES} = CreateVideoInternals;
 
@@ -38,17 +38,11 @@ describe('Templates should be valid', () => {
 			expect(body.dependencies.react).toMatch(/^\^?19/);
 			expect(body.dependencies['react-dom']).toMatch(/^\^?19/);
 
-			if (
-				body.dependencies['zod'] &&
-				!template.shortName.includes('Prompt to Motion Graphics')
-			) {
-				expect(body.dependencies['zod']).toBe('3.22.3');
-			}
 			if (body.dependencies['@types/web']) {
 				expect(body.dependencies['@types/web']).toInclude('0.0.166');
 			}
 
-			expect(body.devDependencies.prettier).toMatch('3.6.0');
+			expect(body.devDependencies.prettier).toMatch('3.8.1');
 			expect(body.private).toBe(true);
 			expect(body.name).toStartWith('template-');
 
@@ -91,7 +85,7 @@ describe('Templates should be valid', () => {
 				/(remotion\sstudio)|(next dev)|(react-router dev)|(tsx watch)|(tsx src\/studio)|(bun studio\.ts)/,
 			);
 			expect(scripts.build).toMatch(
-				/(remotion\sbundle)|(react-router build)|(next\sbuild)|(tsx src\/render)|(tsc \&\& vite build)/,
+				/(remotion\sbundle)|(react-router build)|(next\sbuild)|(tsx src\/render)|(tsc \&\& vite build)|(bun build\.ts)/,
 			);
 		});
 
@@ -157,6 +151,15 @@ describe('Templates should be valid', () => {
 			);
 		});
 
+		it(`${template.shortName} should not use setExperimentalRspackEnabled`, async () => {
+			const {contents, entryPoint} = await findFile([
+				getFileForTemplate(template, 'remotion.config.ts'),
+				getFileForTemplate(template, 'remotion.config.js'),
+			]);
+			expect(entryPoint).toBeTruthy();
+			expect(contents).not.toContain('setExperimentalRspackEnabled');
+		});
+
 		it(`${template.shortName} should use good tsconfig values`, async () => {
 			if (template.shortName.includes('JavaScript')) {
 				return;
@@ -175,7 +178,12 @@ describe('Templates should be valid', () => {
 			}
 			expect(contents).toInclude('"forceConsistentCasingInFileNames": true');
 
-			if (!template.shortName.includes('Next')) {
+			if (
+				!template.shortName.includes('Next') &&
+				!template.shortName.includes(
+					'Prompt to Motion Graphics SaaS Starter Kit',
+				)
+			) {
 				expect(contents).not.toInclude('"incremental": true');
 			}
 		});

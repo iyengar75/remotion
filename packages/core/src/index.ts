@@ -7,6 +7,7 @@ import type {
 	AnyComposition,
 	AudioOrVideoAsset,
 	LoopDisplay,
+	SequenceControls,
 	TRenderAsset,
 } from './CompositionManager.js';
 import type {DelayRenderScope} from './delay-render.js';
@@ -18,6 +19,10 @@ import {checkMultipleRemotionVersions} from './multiple-versions-warning.js';
 import {Null} from './Null.js';
 import type {ProResProfile} from './prores-profile.js';
 import type {PixelFormat, VideoImageFormat} from './render-types.js';
+import type {
+	SequenceFieldSchema,
+	SequenceSchema,
+} from './sequence-field-schema.js';
 import {Sequence} from './Sequence.js';
 import type {UseBufferState} from './use-buffer-state';
 import type {VideoConfig} from './video-config.js';
@@ -123,6 +128,7 @@ export type BundleState =
 checkMultipleRemotionVersions();
 export * from './AbsoluteFill.js';
 export * from './animated-image/index.js';
+export type {AnyZodObject} from './any-zod-type.js';
 export {Artifact} from './Artifact.js';
 export {Audio, Html5Audio, RemotionAudioProps} from './audio/index.js';
 export type {LoopVolumeCurveBehavior} from './audio/use-audio-frame.js';
@@ -250,6 +256,7 @@ export const Config = new Proxy(proxyObj, {
 	},
 });
 
+Sequence.displayName = 'Sequence';
 addSequenceStackTraces(Sequence);
 
 export type _InternalTypes = {
@@ -263,4 +270,12 @@ export type _InternalTypes = {
 	ProResProfile: ProResProfile;
 };
 
-export type {DelayRenderScope, LoopDisplay, UseBufferState};
+export type {
+	AnyComposition,
+	DelayRenderScope,
+	LoopDisplay,
+	SequenceControls,
+	SequenceFieldSchema,
+	SequenceSchema,
+	UseBufferState,
+};

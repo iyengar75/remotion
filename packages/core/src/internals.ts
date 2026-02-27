@@ -43,7 +43,7 @@ import {
 } from './EditorProps.js';
 import {
 	addSequenceStackTraces,
-	enableSequenceStackTraces,
+	getComponentsToAddStacksTo,
 } from './enable-sequence-stack-traces.js';
 import {
 	getPreviewDomElement,
@@ -65,6 +65,7 @@ import {playbackLogging} from './playback-logging.js';
 import {portalNode} from './portal-node.js';
 import {PrefetchProvider} from './prefetch-state.js';
 import {usePreload} from './prefetch.js';
+import {PremountContext} from './PremountContext.js';
 import {getRoot, waitForRoot} from './register-root.js';
 import type {RemotionEnvironment} from './remotion-environment-context.js';
 import {RemotionEnvironmentContext} from './remotion-environment-context.js';
@@ -83,8 +84,13 @@ import {
 	resolveCompositionsRef,
 	useResolvedVideoConfig,
 } from './ResolveCompositionConfig.js';
+import type {
+	SequenceFieldSchema,
+	SequenceSchema,
+} from './sequence-field-schema.js';
 import {SequenceContext} from './SequenceContext.js';
 import {
+	SequenceControlOverrideContext,
 	SequenceManager,
 	SequenceVisibilityToggleContext,
 } from './SequenceManager.js';
@@ -113,6 +119,8 @@ import {
 	useBasicMediaInTimeline,
 	useMediaInTimeline,
 } from './use-media-in-timeline.js';
+import {useSchema} from './use-schema.js';
+import {useSequenceControlOverride} from './use-sequence-control-override.js';
 import {useUnsafeVideoConfig} from './use-unsafe-video-config.js';
 import {useVideo} from './use-video.js';
 import {validateMediaProps} from './validate-media-props.js';
@@ -171,8 +179,11 @@ export const Internals = {
 	VideoForPreview,
 	CompositionManager,
 	CompositionSetters,
+	SequenceControlOverrideContext,
 	SequenceManager,
 	SequenceVisibilityToggleContext,
+	useSchema,
+	useSequenceControlOverride,
 	RemotionRootContexts,
 	CompositionManagerProvider,
 	useVideo,
@@ -183,6 +194,7 @@ export const Internals = {
 	useLazyComponent,
 	truthy,
 	SequenceContext,
+	PremountContext,
 	useRemotionContexts,
 	RemotionContextProvider,
 	CSSUtils,
@@ -225,7 +237,7 @@ export const Internals = {
 	useMediaStartsAt,
 	BufferingProvider,
 	BufferingContextReact,
-	enableSequenceStackTraces,
+	getComponentsToAddStacksTo,
 	CurrentScaleContext,
 	PreviewSizeContext,
 	calculateScale,
@@ -261,6 +273,8 @@ export type {
 	LoggingContextValue,
 	MediaVolumeContextValue,
 	RemotionEnvironment,
+	SequenceFieldSchema,
+	SequenceSchema,
 	SerializedJSONWithCustomFields,
 	SetMediaVolumeContextValue,
 	SetTimelineContextValue,

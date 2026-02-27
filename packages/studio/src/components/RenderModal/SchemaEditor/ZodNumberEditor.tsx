@@ -1,73 +1,24 @@
 import React, {useCallback} from 'react';
-import type {z} from 'zod';
 import {InputDragger} from '../../NewComposition/InputDragger';
 import {Fieldset} from './Fieldset';
+import {useLocalState} from './local-state';
 import {SchemaLabel} from './SchemaLabel';
+import {
+	getZodNumberMaximum,
+	getZodNumberMinimum,
+	getZodNumberStep,
+} from './zod-number-constraints';
+import type {AnyZodSchema} from './zod-schema-type';
+import type {JSONPath} from './zod-types';
 import {ZodFieldValidation} from './ZodFieldValidation';
 import type {UpdaterFunction} from './ZodSwitch';
-import {useLocalState} from './local-state';
-import type {JSONPath} from './zod-types';
 
 const fullWidth: React.CSSProperties = {
 	width: '100%',
 };
 
-const getMinValue = (schema: z.ZodTypeAny) => {
-	const minCheck = (schema as z.ZodNumber)._def.checks.find(
-		(c) => c.kind === 'min',
-	);
-	if (!minCheck) {
-		return -Infinity;
-	}
-
-	if (minCheck.kind !== 'min') {
-		throw new Error('Expected min check');
-	}
-
-	if (!minCheck.inclusive) {
-		return -Infinity;
-	}
-
-	return minCheck.value;
-};
-
-const getMaxValue = (schema: z.ZodTypeAny) => {
-	const maxCheck = (schema as z.ZodNumber)._def.checks.find(
-		(c) => c.kind === 'max',
-	);
-	if (!maxCheck) {
-		return Infinity;
-	}
-
-	if (maxCheck.kind !== 'max') {
-		throw new Error('Expected max check');
-	}
-
-	if (!maxCheck.inclusive) {
-		return Infinity;
-	}
-
-	return maxCheck.value;
-};
-
-const getStep = (schema: z.ZodTypeAny): number | undefined => {
-	const multipleStep = (schema as z.ZodNumber)._def.checks.find(
-		(c) => c.kind === 'multipleOf',
-	);
-
-	if (!multipleStep) {
-		return undefined;
-	}
-
-	if (multipleStep.kind !== 'multipleOf') {
-		throw new Error('Expected multipleOf check');
-	}
-
-	return multipleStep.value;
-};
-
 export const ZodNumberEditor: React.FC<{
-	readonly schema: z.ZodTypeAny;
+	readonly schema: AnyZodSchema;
 	readonly jsonPath: JSONPath;
 	readonly value: number;
 	readonly setValue: UpdaterFunction<number>;
@@ -147,9 +98,9 @@ export const ZodNumberEditor: React.FC<{
 					placeholder={jsonPath.join('.')}
 					onTextChange={onTextChange}
 					onValueChange={onNumberChange}
-					min={getMinValue(schema)}
-					max={getMaxValue(schema)}
-					step={getStep(schema)}
+					min={getZodNumberMinimum(schema)}
+					max={getZodNumberMaximum(schema)}
+					step={getZodNumberStep(schema)}
 					rightAlign={false}
 				/>
 				<ZodFieldValidation path={jsonPath} localValue={localValue} />

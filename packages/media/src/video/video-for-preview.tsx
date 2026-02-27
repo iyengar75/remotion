@@ -6,7 +6,13 @@ import React, {
 	useRef,
 	useState,
 } from 'react';
-import type {LogLevel, LoopVolumeCurveBehavior, VolumeProp} from 'remotion';
+import type {
+	LogLevel,
+	LoopVolumeCurveBehavior,
+	SequenceControls,
+	SequenceSchema,
+	VolumeProp,
+} from 'remotion';
 import {
 	Html5Video,
 	Internals,
@@ -59,7 +65,13 @@ type VideoForPreviewProps = {
 	readonly onError: MediaOnError | undefined;
 };
 
-const VideoForPreviewAssertedShowing: React.FC<VideoForPreviewProps> = ({
+type VideoForPreviewAssertedShowingProps = VideoForPreviewProps & {
+	readonly controls: SequenceControls | undefined;
+};
+
+const VideoForPreviewAssertedShowing: React.FC<
+	VideoForPreviewAssertedShowingProps
+> = ({
 	src: unpreloadedSrc,
 	style,
 	playbackRate,
@@ -81,6 +93,7 @@ const VideoForPreviewAssertedShowing: React.FC<VideoForPreviewProps> = ({
 	debugOverlay,
 	headless,
 	onError,
+	controls,
 }) => {
 	const src = usePreload(unpreloadedSrc);
 
@@ -123,6 +136,15 @@ const VideoForPreviewAssertedShowing: React.FC<VideoForPreviewProps> = ({
 	const parentSequence = useContext(SequenceContext);
 	const isPremounting = Boolean(parentSequence?.premounting);
 	const isPostmounting = Boolean(parentSequence?.postmounting);
+	const {premountFramesRemaining, playing: playingWhilePremounting} =
+		useContext(Internals.PremountContext);
+
+	// Allows for pre-scheduling audio nodes before the premounting ends,
+	// since there is some latency.
+	const isNextFrameGoingToPlay =
+		playingWhilePremounting &&
+		premountFramesRemaining > 0 &&
+		premountFramesRemaining <= 1.000000001;
 
 	const loopDisplay = useLoopDisplay({
 		loop,
@@ -146,6 +168,7 @@ const VideoForPreviewAssertedShowing: React.FC<VideoForPreviewProps> = ({
 		mediaVolume,
 		trimAfter,
 		trimBefore,
+		controls,
 	});
 
 	const isSequenceHidden = hidden[timelineId] ?? false;
@@ -168,13 +191,16 @@ const VideoForPreviewAssertedShowing: React.FC<VideoForPreviewProps> = ({
 		);
 	}
 
+	const effectiveMuted =
+		isSequenceHidden || muted || mediaMuted || userPreferredVolume <= 0;
+
 	const isPlayerBuffering = Internals.useIsPlayerBuffering(buffering);
 	const initialPlaying = useRef(playing && !isPlayerBuffering);
 	const initialIsPremounting = useRef(isPremounting);
 	const initialIsPostmounting = useRef(isPostmounting);
 	const initialGlobalPlaybackRate = useRef(globalPlaybackRate);
 	const initialPlaybackRate = useRef(playbackRate);
-	const initialMuted = useRef(muted);
+	const initialMuted = useRef(effectiveMuted);
 
 	useEffect(() => {
 		if (!sharedAudioContext) return;
@@ -196,6 +222,7 @@ const VideoForPreviewAssertedShowing: React.FC<VideoForPreviewProps> = ({
 				isPremounting: initialIsPremounting.current,
 				isPostmounting: initialIsPostmounting.current,
 				globalPlaybackRate: initialGlobalPlaybackRate.current,
+				durationInFrames: videoConfig.durationInFrames,
 				onVideoFrameCallback: initialOnVideoFrameRef.current ?? null,
 				playing: initialPlaying.current,
 			});
@@ -328,6 +355,7 @@ const VideoForPreviewAssertedShowing: React.FC<VideoForPreviewProps> = ({
 		sharedAudioContext,
 		videoConfig.fps,
 		onError,
+		videoConfig.durationInFrames,
 	]);
 
 	const classNameValue = useMemo(() => {
@@ -340,12 +368,41 @@ const VideoForPreviewAssertedShowing: React.FC<VideoForPreviewProps> = ({
 		const mediaPlayer = mediaPlayerRef.current;
 		if (!mediaPlayer) return;
 
-		if (playing && !isPlayerBuffering) {
+		if (isNextFrameGoingToPlay) {
+			const currentTimeUntilZero =
+				// Premounting does not consider the local playback rate, just the global one.
+				premountFramesRemaining / videoConfig.fps / globalPlaybackRate;
+			mediaPlayer.playAudio(currentTimeRef.current - currentTimeUntilZero);
+		}
+	}, [
+		isNextFrameGoingToPlay,
+		premountFramesRemaining,
+		videoConfig.fps,
+		globalPlaybackRate,
+	]);
+
+	useEffect(() => {
+		const mediaPlayer = mediaPlayerRef.current;
+		if (!mediaPlayer) return;
+
+		if (playing && !isPlayerBuffering && !isNextFrameGoingToPlay) {
+			// Play does nothing if already playing, so it can be called multiple times.
 			mediaPlayer.play(currentTimeRef.current);
 		} else {
+			// Pause will do the work all over again and check if there are scheduled nodes.
+			// This is why isNextFrameGoingToPlay is the in the dependency array.
+			// We want to trigger another pause if due to being 1 frame before premounting ends,
+			// audio is resumed and at the same time a pause is happening, we need to ensure
+			// that the pause is triggered again even though officially "playing" never changed.
 			mediaPlayer.pause();
 		}
-	}, [isPlayerBuffering, playing, logLevel, mediaPlayerReady]);
+	}, [
+		isPlayerBuffering,
+		playing,
+		logLevel,
+		mediaPlayerReady,
+		isNextFrameGoingToPlay,
+	]);
 
 	useEffect(() => {
 		const mediaPlayer = mediaPlayerRef.current;
@@ -364,9 +421,6 @@ const VideoForPreviewAssertedShowing: React.FC<VideoForPreviewProps> = ({
 
 		mediaPlayer.setTrimAfter(trimAfter, currentTimeRef.current);
 	}, [trimAfter, mediaPlayerReady]);
-
-	const effectiveMuted =
-		isSequenceHidden || muted || mediaMuted || userPreferredVolume <= 0;
 
 	useLayoutEffect(() => {
 		const mediaPlayer = mediaPlayerRef.current;
@@ -399,7 +453,7 @@ const VideoForPreviewAssertedShowing: React.FC<VideoForPreviewProps> = ({
 			return;
 		}
 
-		mediaPlayer.setPlaybackRate(playbackRate);
+		mediaPlayer.setPlaybackRate(playbackRate, currentTimeRef.current);
 	}, [playbackRate, mediaPlayerReady]);
 
 	useLayoutEffect(() => {
@@ -419,6 +473,15 @@ const VideoForPreviewAssertedShowing: React.FC<VideoForPreviewProps> = ({
 
 		mediaPlayer.setLoop(loop);
 	}, [loop, mediaPlayerReady]);
+
+	useLayoutEffect(() => {
+		const mediaPlayer = mediaPlayerRef.current;
+		if (!mediaPlayer || !mediaPlayerReady) {
+			return;
+		}
+
+		mediaPlayer.setDurationInFrames(videoConfig.durationInFrames);
+	}, [videoConfig.durationInFrames, mediaPlayerReady]);
 
 	useLayoutEffect(() => {
 		const mediaPlayer = mediaPlayerRef.current;
@@ -514,7 +577,67 @@ const VideoForPreviewAssertedShowing: React.FC<VideoForPreviewProps> = ({
 	);
 };
 
+const videoSchema = {
+	volume: {
+		type: 'number',
+		min: 0,
+		max: 20,
+		step: 0.01,
+		default: 1,
+		description: 'Volume',
+	},
+	playbackRate: {
+		type: 'number',
+		min: 0,
+		step: 0.01,
+		default: 1,
+		description: 'Playback Rate',
+	},
+	trimBefore: {type: 'number', min: 0, default: 0},
+	trimAfter: {type: 'number', min: 0, default: 0},
+} as const satisfies SequenceSchema;
+
 export const VideoForPreview: React.FC<VideoForPreviewProps> = (props) => {
+	const schemaInput = useMemo(() => {
+		if (typeof props.volume !== 'number') {
+			return null;
+		}
+
+		return {
+			volume: props.volume,
+			playbackRate: props.playbackRate,
+			trimBefore: props.trimBefore,
+			trimAfter: props.trimAfter,
+			loop: props.loop,
+		};
+	}, [
+		props.volume,
+		props.playbackRate,
+		props.trimBefore,
+		props.trimAfter,
+		props.loop,
+	]);
+
+	const {controls, values} = Internals.useSchema(
+		schemaInput ? videoSchema : null,
+		schemaInput,
+	);
+
+	const volume =
+		schemaInput !== null ? (values.volume as number) : props.volume;
+	const playbackRate =
+		schemaInput !== null ? (values.playbackRate as number) : props.playbackRate;
+	const trimBefore =
+		schemaInput !== null
+			? (values.trimBefore as number | undefined)
+			: props.trimBefore;
+	const trimAfter =
+		schemaInput !== null
+			? (values.trimAfter as number | undefined)
+			: props.trimAfter;
+	const effectiveLoop =
+		schemaInput !== null ? (values.loop as boolean) : props.loop;
+
 	const frame = useCurrentFrame();
 	const videoConfig = useVideoConfig();
 	const currentTime = frame / videoConfig.fps;
@@ -523,10 +646,10 @@ export const VideoForPreview: React.FC<VideoForPreviewProps> = (props) => {
 		return (
 			getTimeInSeconds({
 				unloopedTimeInSeconds: currentTime,
-				playbackRate: props.playbackRate,
-				loop: props.loop,
-				trimBefore: props.trimBefore,
-				trimAfter: props.trimAfter,
+				playbackRate,
+				loop: effectiveLoop,
+				trimBefore,
+				trimAfter,
 				mediaDurationInSeconds: Infinity,
 				fps: videoConfig.fps,
 				ifNoMediaDuration: 'infinity',
@@ -535,11 +658,11 @@ export const VideoForPreview: React.FC<VideoForPreviewProps> = (props) => {
 		);
 	}, [
 		currentTime,
-		props.loop,
-		props.playbackRate,
+		effectiveLoop,
+		playbackRate,
 		props.src,
-		props.trimAfter,
-		props.trimBefore,
+		trimAfter,
+		trimBefore,
 		videoConfig.fps,
 	]);
 
@@ -547,5 +670,15 @@ export const VideoForPreview: React.FC<VideoForPreviewProps> = (props) => {
 		return null;
 	}
 
-	return <VideoForPreviewAssertedShowing {...props} />;
+	return (
+		<VideoForPreviewAssertedShowing
+			{...props}
+			volume={volume}
+			playbackRate={playbackRate}
+			loop={effectiveLoop}
+			trimBefore={trimBefore}
+			trimAfter={trimAfter}
+			controls={controls}
+		/>
+	);
 };

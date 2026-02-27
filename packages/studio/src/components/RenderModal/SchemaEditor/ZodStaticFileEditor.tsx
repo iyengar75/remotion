@@ -1,23 +1,22 @@
 import React, {useCallback, useMemo} from 'react';
-import type {z} from 'zod';
-import {getStaticFiles} from '../../../api/get-static-files';
 import {Checkmark} from '../../../icons/Checkmark';
 import type {ComboboxValue} from '../../NewComposition/ComboBox';
 import {Combobox} from '../../NewComposition/ComboBox';
-import {useZodIfPossible} from '../../get-zod-if-possible';
+import {useStaticFiles} from '../../use-static-files';
 import {Fieldset} from './Fieldset';
+import {useLocalState} from './local-state';
 import {SchemaLabel} from './SchemaLabel';
+import type {AnyZodSchema} from './zod-schema-type';
+import type {JSONPath} from './zod-types';
 import {ZodFieldValidation} from './ZodFieldValidation';
 import type {UpdaterFunction} from './ZodSwitch';
-import {useLocalState} from './local-state';
-import type {JSONPath} from './zod-types';
 
 const container: React.CSSProperties = {
 	width: '100%',
 };
 
 export const ZodStaticFileEditor: React.FC<{
-	readonly schema: z.ZodTypeAny;
+	readonly schema: AnyZodSchema;
 	readonly jsonPath: JSONPath;
 	readonly value: string;
 	readonly defaultValue: string;
@@ -41,11 +40,6 @@ export const ZodStaticFileEditor: React.FC<{
 	saveDisabledByParent,
 	mayPad,
 }) => {
-	const z = useZodIfPossible();
-	if (!z) {
-		throw new Error('expected zod');
-	}
-
 	const {
 		localValue,
 		onChange: setLocalValue,
@@ -57,17 +51,11 @@ export const ZodStaticFileEditor: React.FC<{
 		savedValue: defaultValue,
 	});
 
-	const def = schema._def;
-
-	const typeName = def.typeName as z.ZodFirstPartyTypeKind;
-	if (typeName !== z.ZodFirstPartyTypeKind.ZodString) {
-		throw new Error('expected enum');
-	}
-
 	const isRoot = jsonPath.length === 0;
+	const staticFiles = useStaticFiles();
 
 	const comboBoxValues = useMemo(() => {
-		return getStaticFiles().map((option): ComboboxValue => {
+		return staticFiles.map((option): ComboboxValue => {
 			return {
 				value: option.src,
 				label: option.name,
@@ -82,7 +70,7 @@ export const ZodStaticFileEditor: React.FC<{
 				type: 'item',
 			};
 		});
-	}, [setLocalValue, value]);
+	}, [setLocalValue, staticFiles, value]);
 
 	const save = useCallback(() => {
 		onSave(() => value);

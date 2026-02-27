@@ -3,7 +3,6 @@ import {Player} from '@remotion/player';
 import React, {useCallback, useMemo, useState} from 'react';
 import {AbsoluteFill} from 'remotion';
 import {Control} from './control';
-import styles from './styles.module.css';
 import type {DemoType} from './types';
 import {
 	animationMathDemo,
@@ -41,6 +40,7 @@ import {
 	triangleDemo,
 	wipePresentationDemo,
 } from './types';
+import styles from './styles.module.css';
 
 const container: React.CSSProperties = {
 	overflow: 'hidden',
@@ -129,6 +129,7 @@ export const Demo: React.FC<{
 		<div style={container}>
 			<Player
 				key={key}
+				acknowledgeRemotionLicense
 				component={demo.comp}
 				compositionWidth={demo.compWidth}
 				compositionHeight={demo.compHeight}
@@ -169,6 +170,7 @@ export const Demo: React.FC<{
 				}}
 				inputProps={{...state, darkMode: colorMode === 'dark'}}
 				autoPlay={demo.autoPlay}
+				controls={demo.controls}
 				loop
 			/>
 			<div className={styles.containerrow}>

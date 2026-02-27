@@ -1,20 +1,21 @@
 import React, {useMemo, useState} from 'react';
-import type {z} from 'zod';
 import {
 	useZodIfPossible,
 	useZodTypesIfPossible,
 } from '../../get-zod-if-possible';
+import {createZodValues} from './create-zod-values';
+import {deepEqual} from './deep-equal';
 import {Fieldset} from './Fieldset';
+import {useLocalState} from './local-state';
 import {SchemaLabel} from './SchemaLabel';
 import {SchemaArrayItemSeparationLine} from './SchemaSeparationLine';
 import {SchemaVerticalGuide} from './SchemaVerticalGuide';
+import type {AnyZodSchema} from './zod-schema-type';
+import {getArrayElement} from './zod-schema-type';
+import type {JSONPath} from './zod-types';
 import {ZodArrayItemEditor} from './ZodArrayItemEditor';
 import {ZodFieldValidation} from './ZodFieldValidation';
 import type {UpdaterFunction} from './ZodSwitch';
-import {createZodValues} from './create-zod-values';
-import {deepEqual} from './deep-equal';
-import {useLocalState} from './local-state';
-import type {JSONPath} from './zod-types';
 
 const rowStyle: React.CSSProperties = {
 	display: 'flex',
@@ -23,7 +24,7 @@ const rowStyle: React.CSSProperties = {
 };
 
 export const ZodMatrixEditor: React.FC<{
-	readonly schema: z.ZodTypeAny;
+	readonly schema: AnyZodSchema;
 	readonly jsonPath: JSONPath;
 	readonly value: unknown[];
 	readonly defaultValue: unknown[];
@@ -56,7 +57,7 @@ export const ZodMatrixEditor: React.FC<{
 
 	const [expanded, setExpanded] = useState(true);
 
-	const def = schema._def as z.ZodArrayDef;
+	const arrayElement = getArrayElement(schema);
 
 	const suffix = useMemo(() => {
 		return expanded ? ' [' : ' [...] ';
@@ -128,12 +129,12 @@ export const ZodMatrixEditor: React.FC<{
 													<ZodArrayItemEditor
 														onChange={onChange}
 														value={item}
-														def={def}
+														elementSchema={arrayElement}
 														index={actualIndex}
 														jsonPath={jsonPath}
 														defaultValue={
 															defaultValue?.[actualIndex] ??
-															createZodValues(def.type, z, zodTypes)
+															createZodValues(arrayElement, z, zodTypes)
 														}
 														onSave={onSave}
 														showSaveButton={showSaveButton}

@@ -8,7 +8,13 @@ export {
 	ApplyVisualControlResponse,
 	CanUpdateDefaultPropsRequest,
 	CanUpdateDefaultPropsResponse,
+	CanUpdateSequencePropStatus,
+	CanUpdateSequencePropsRequest,
+	CanUpdateSequencePropsResponse,
 	CancelRenderRequest,
+	SubscribeToSequencePropsRequest,
+	SubscribeToSequencePropsResponse,
+	UnsubscribeFromSequencePropsRequest,
 	CancelRenderResponse,
 	CopyStillToClipboardRequest,
 	DeleteStaticFileRequest,
@@ -21,6 +27,8 @@ export {
 	RemoveRenderRequest,
 	RestartStudioRequest,
 	RestartStudioResponse,
+	SaveSequencePropsRequest,
+	SaveSequencePropsResponse,
 	SimpleDiff,
 	SubscribeToFileExistenceRequest,
 	SubscribeToFileExistenceResponse,
@@ -76,6 +84,7 @@ export {
 	StitchingProgressInput,
 	UiOpenGlOptions,
 } from './render-job';
+export type {CompletedClientRender} from './render-job';
 export {SOURCE_MAP_ENDPOINT} from './source-map-endpoint';
 export {
 	ScriptLine,

@@ -24,11 +24,18 @@ export type {
 } from '@remotion/studio-shared';
 
 import {AnsiDiff} from './ansi-diff';
-import {openBrowser} from './better-opn';
+import {
+	addCompletedClientRender,
+	getCompletedClientRenders,
+	removeCompletedClientRender,
+} from './client-render-queue';
 import {parseAndApplyCodemod} from './codemods/duplicate-composition';
 import {installFileWatcher} from './file-watcher';
 import {getLatestRemotionVersion} from './get-latest-remotion-version';
-import {getInstalledDependencies} from './helpers/get-installed-dependencies';
+import {
+	getInstalledDependencies,
+	getInstalledDependenciesWithVersions,
+} from './helpers/get-installed-dependencies';
 import {getInstallCommand} from './helpers/install-command';
 import {
 	getMaxTimelineTracks,
@@ -55,7 +62,10 @@ export const StudioServerInternals = {
 	AnsiDiff,
 	formatBytes,
 	parseAndApplyCodemod,
-	openBrowser,
 	getInstalledDependencies,
+	getInstalledDependenciesWithVersions,
 	getInstallCommand,
+	addCompletedClientRender,
+	getCompletedClientRenders,
+	removeCompletedClientRender,
 };

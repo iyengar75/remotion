@@ -1,9 +1,10 @@
 import type {ComponentType, LazyExoticComponent} from 'react';
 import React from 'react';
-import type {AnyZodObject} from 'zod';
+import type {AnyZodObject} from './any-zod-type.js';
 import type {CalculateMetadataFunction} from './Composition.js';
 import type {DownloadBehavior} from './download-behavior.js';
 import type {InferProps, PropsIfHasProps} from './props-if-has-props.js';
+import type {SequenceSchema} from './sequence-field-schema.js';
 
 export type TComposition<
 	Schema extends AnyZodObject,
@@ -87,6 +88,12 @@ export type LoopDisplay = {
 	durationInFrames: number;
 };
 
+export type SequenceControls = {
+	schema: SequenceSchema;
+	currentValue: Record<string, unknown>;
+	overrideId: string;
+};
+
 export type TSequence = {
 	from: number;
 	duration: number;
@@ -100,6 +107,7 @@ export type TSequence = {
 	stack: string | null;
 	premountDisplay: number | null;
 	postmountDisplay: number | null;
+	controls: SequenceControls | null;
 } & EnhancedTSequenceData;
 
 export type AudioOrVideoAsset = {

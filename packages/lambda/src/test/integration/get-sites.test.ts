@@ -1,6 +1,6 @@
+import {expect, test} from 'bun:test';
 import {LambdaClientInternals} from '@remotion/lambda-client';
 import {internalGetOrCreateBucket} from '@remotion/serverless';
-import {expect, test} from 'bun:test';
 import {internalDeploySite} from '../../api/deploy-site';
 import {mockFullClientSpecifics} from '../mock-implementation';
 import {mockImplementation} from '../mocks/mock-implementation';
@@ -29,6 +29,7 @@ test('Should have a site after deploying', async () => {
 		forcePathStyle: false,
 		skipPutAcl: false,
 		requestHandler: null,
+		logLevel: 'info',
 	});
 	expect(
 		await internalDeploySite({

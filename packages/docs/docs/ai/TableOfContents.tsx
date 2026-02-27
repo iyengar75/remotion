@@ -31,16 +31,18 @@ export const TableOfContents: React.FC = () => {
 					<div>Skill files for Claude Code, Codex, etc.</div>
 				</TOCItem>
 				<TOCItem link="/docs/ai/generate">
-					<strong>{'Just-in-time Code Generation'}</strong>
-					<div>Generate Remotion code using LLMs</div>
+					<strong>{'Code generation with LLMs'}</strong>
+					<div>Generate Remotion code by invoking AI</div>
 				</TOCItem>
 				<TOCItem link="/docs/ai/dynamic-compilation">
 					<strong>{'Just-in-time compilation'}</strong>
 					<div>Compile a Remotion component in JavaScript</div>
 				</TOCItem>
-				<TOCItem link="/templates/prompt-to-motion-graphics">
-					<strong>{'Prompt to Motion Graphics template'}</strong>
-					<div>A SaaS template for "Prompt to Motion Graphics" products.</div>
+				<TOCItem link="/docs/ai/ai-saas-template">
+					<strong>{'AI SaaS Template'}</strong>
+					<div>
+						An AI SaaS template for "Prompt to Motion Graphics" products.
+					</div>
 				</TOCItem>
 				<TOCItem link="/templates/prompt-to-video">
 					<strong>{'Prompt to Video'}</strong>

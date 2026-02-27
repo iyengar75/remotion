@@ -1,27 +1,27 @@
 import React, {useCallback, useMemo} from 'react';
-import type {z} from 'zod';
 import {colorWithNewOpacity} from '../../../helpers/color-math';
-import {InputDragger} from '../../NewComposition/InputDragger';
-import {RemotionInput} from '../../NewComposition/RemInput';
-import {RemInputTypeColor} from '../../NewComposition/RemInputTypeColor';
 import {
 	useZodIfPossible,
 	useZodTypesIfPossible,
 } from '../../get-zod-if-possible';
 import {Row, Spacing} from '../../layout';
+import {InputDragger} from '../../NewComposition/InputDragger';
+import {RemotionInput} from '../../NewComposition/RemInput';
+import {RemInputTypeColor} from '../../NewComposition/RemInputTypeColor';
 import {Fieldset} from './Fieldset';
+import {useLocalState} from './local-state';
 import {SchemaLabel} from './SchemaLabel';
+import type {AnyZodSchema} from './zod-schema-type';
+import type {JSONPath} from './zod-types';
 import {ZodFieldValidation} from './ZodFieldValidation';
 import type {UpdaterFunction} from './ZodSwitch';
-import {useLocalState} from './local-state';
-import type {JSONPath} from './zod-types';
 
 const fullWidth: React.CSSProperties = {
 	width: '100%',
 };
 
 export const ZodColorEditor: React.FC<{
-	readonly schema: z.ZodTypeAny;
+	readonly schema: AnyZodSchema;
 	readonly jsonPath: JSONPath;
 	readonly value: string;
 	readonly defaultValue: string;

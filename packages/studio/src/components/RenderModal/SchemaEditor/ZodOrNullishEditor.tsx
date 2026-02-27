@@ -1,5 +1,4 @@
 import {useCallback} from 'react';
-import type {z} from 'zod';
 import {LIGHT_TEXT} from '../../../helpers/colors';
 import {Checkbox} from '../../Checkbox';
 import {
@@ -7,13 +6,14 @@ import {
 	useZodTypesIfPossible,
 } from '../../get-zod-if-possible';
 import {Spacing} from '../../layout';
+import {createZodValues} from './create-zod-values';
 import {Fieldset} from './Fieldset';
+import {useLocalState} from './local-state';
 import {SchemaLabel} from './SchemaLabel';
+import type {AnyZodSchema} from './zod-schema-type';
+import type {JSONPath} from './zod-types';
 import type {UpdaterFunction} from './ZodSwitch';
 import {ZodSwitch} from './ZodSwitch';
-import {createZodValues} from './create-zod-values';
-import {useLocalState} from './local-state';
-import type {JSONPath} from './zod-types';
 
 const labelStyle: React.CSSProperties = {
 	fontFamily: 'sans-serif',
@@ -33,8 +33,8 @@ export const ZodOrNullishEditor: React.FC<{
 	jsonPath: JSONPath;
 	value: unknown;
 	defaultValue: unknown;
-	schema: z.ZodTypeAny;
-	innerSchema: z.ZodTypeAny;
+	schema: AnyZodSchema;
+	innerSchema: AnyZodSchema;
 	setValue: UpdaterFunction<unknown>;
 	onSave: UpdaterFunction<unknown>;
 	onRemove: null | (() => void);

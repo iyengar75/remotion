@@ -462,6 +462,23 @@ const sidebars: SidebarsConfig = {
 		},
 		{
 			type: 'category',
+			label: '@remotion/sfx',
+			link: {
+				type: 'doc',
+				id: 'sfx/index',
+			},
+			items: [
+				'sfx/whip',
+				'sfx/whoosh',
+				'sfx/page-turn',
+				'sfx/ui-switch',
+				'sfx/mouse-click',
+				'sfx/shutter-modern',
+				'sfx/shutter-old',
+			],
+		},
+		{
+			type: 'category',
 			label: '@remotion/openai-whisper',
 			link: {
 				type: 'doc',
@@ -555,6 +572,7 @@ const sidebars: SidebarsConfig = {
 				'renderer/get-silent-parts',
 				'renderer/combine-chunks',
 				'renderer/extract-audio',
+				'renderer/types',
 			],
 		},
 		{
@@ -719,6 +737,22 @@ const sidebars: SidebarsConfig = {
 
 		{
 			type: 'category',
+			label: '@remotion/vercel',
+			link: {
+				type: 'doc',
+				id: 'vercel/vercel-api',
+			},
+			items: [
+				'vercel/create-sandbox',
+				'vercel/add-bundle-to-sandbox',
+				'vercel/render-media-on-vercel',
+				'vercel/render-still-on-vercel',
+				'vercel/upload-to-vercel-blob',
+				'vercel/vercel-types',
+			],
+		},
+		{
+			type: 'category',
 			label: '@remotion/web-renderer',
 			link: {
 				type: 'doc',
@@ -766,6 +800,7 @@ const sidebars: SidebarsConfig = {
 				'zod-types/z-color',
 				'zod-types/z-textarea',
 				'zod-types/z-matrix',
+				'zod-types/v3',
 			],
 		},
 		{
@@ -903,6 +938,7 @@ const sidebars: SidebarsConfig = {
 				'audio/pitch',
 				'audio/from-video',
 				'audio/visualization',
+				'audio/sfx',
 				'audio/exporting',
 				'audio/order-of-operations',
 			],
@@ -985,6 +1021,7 @@ const sidebars: SidebarsConfig = {
 				'miscellaneous/cloud-gpu-docker',
 				'compare-ssr',
 				'distributed-rendering',
+				'vercel-sandbox',
 				'cloudflare-containers',
 				'azure-container-apps',
 			],
@@ -1084,6 +1121,7 @@ const sidebars: SidebarsConfig = {
 				'lambda/upgrading',
 				'lambda/uninstall',
 				'lambda/s3-public-access',
+				'lambda/bucket-security',
 				'lambda/naming-convention',
 			],
 		},
@@ -1209,6 +1247,7 @@ const sidebars: SidebarsConfig = {
 				'ai/chatbot',
 				'ai/generate',
 				'ai/dynamic-compilation',
+				'ai/ai-saas-template',
 				'ai/mcp',
 				'ai/system-prompt',
 				'ai/skills',
@@ -1284,7 +1323,7 @@ const sidebars: SidebarsConfig = {
 				'miscellaneous/render-in-browser',
 				'miscellaneous/automatic-duration',
 				'miscellaneous/nextjs',
-				'miscellaneous/vercel',
+				'vercel',
 				'miscellaneous/render-on-edge',
 				'miscellaneous/embed-studio',
 				'miscellaneous/absolute-paths',
@@ -1406,6 +1445,7 @@ const sidebars: SidebarsConfig = {
 				'contributing/rust',
 				'contributing/web-renderer',
 				'contributing/presentation',
+				'contributing/sfx',
 				'authoring-packages',
 				'contributing/ineligible',
 			],
@@ -1429,6 +1469,12 @@ const sidebars: SidebarsConfig = {
 			type: 'link',
 			href: '/docs/timeline',
 			label: 'Timeline',
+			className: 'pro-item',
+		},
+		{
+			type: 'link',
+			href: '/docs/animated-captions',
+			label: 'Animated Captions',
 			className: 'pro-item',
 		},
 		{
@@ -1558,6 +1604,22 @@ const sidebars: SidebarsConfig = {
 				'timeline/faq',
 				'timeline/render',
 			],
+		},
+	],
+	animatedCaptionsSidebar: [
+		{
+			type: 'link',
+			href: '/docs',
+			label: '← Back to the main docs',
+		},
+		{
+			type: 'category',
+			label: 'Animated Captions',
+			link: {
+				type: 'doc',
+				id: 'animated-captions/index',
+			},
+			items: ['animated-captions/faq'],
 		},
 	],
 	recorderSidebar: [

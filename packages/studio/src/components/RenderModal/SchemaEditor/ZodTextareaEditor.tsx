@@ -1,16 +1,16 @@
 import React, {useCallback} from 'react';
-import type {z} from 'zod';
-import {RemTextarea} from '../../NewComposition/RemTextarea';
 import {
 	useZodIfPossible,
 	useZodTypesIfPossible,
 } from '../../get-zod-if-possible';
+import {RemTextarea} from '../../NewComposition/RemTextarea';
 import {Fieldset} from './Fieldset';
+import {useLocalState} from './local-state';
 import {SchemaLabel} from './SchemaLabel';
+import type {AnyZodSchema} from './zod-schema-type';
+import type {JSONPath} from './zod-types';
 import {ZodFieldValidation} from './ZodFieldValidation';
 import type {UpdaterFunction} from './ZodSwitch';
-import {useLocalState} from './local-state';
-import type {JSONPath} from './zod-types';
 
 const fullWidth: React.CSSProperties = {
 	width: '100%',
@@ -22,7 +22,7 @@ const textareaStyle: React.CSSProperties = {
 };
 
 export const ZodTextareaEditor: React.FC<{
-	readonly schema: z.ZodTypeAny;
+	readonly schema: AnyZodSchema;
 	readonly jsonPath: JSONPath;
 	readonly value: string;
 	readonly defaultValue: string;

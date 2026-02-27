@@ -94,8 +94,8 @@ export const RenderQueueItemStatus: React.FC<{
 	if (job.status === 'running') {
 		let progressValue: number;
 		if (isClientJob) {
-			const {renderedFrames, totalFrames} = job.progress;
-			progressValue = totalFrames > 0 ? renderedFrames / totalFrames : 0;
+			const {encodedFrames, totalFrames} = job.progress;
+			progressValue = totalFrames > 0 ? encodedFrames / totalFrames : 0;
 		} else {
 			progressValue = job.progress.value;
 		}
@@ -103,6 +103,14 @@ export const RenderQueueItemStatus: React.FC<{
 		return (
 			<button type="button" style={invisibleStyle} onClick={onClick}>
 				<CircularProgress progress={Math.max(0.07, progressValue)} />
+			</button>
+		);
+	}
+
+	if (job.status === 'saving') {
+		return (
+			<button type="button" style={invisibleStyle} onClick={onClick}>
+				<CircularProgress progress={0.95} />
 			</button>
 		);
 	}

@@ -6,7 +6,13 @@ import React, {
 	useRef,
 	useState,
 } from 'react';
-import type {LogLevel, LoopVolumeCurveBehavior, VolumeProp} from 'remotion';
+import type {
+	LogLevel,
+	LoopVolumeCurveBehavior,
+	SequenceControls,
+	SequenceSchema,
+	VolumeProp,
+} from 'remotion';
 import {
 	Internals,
 	Audio as RemotionAudio,
@@ -54,7 +60,13 @@ type NewAudioForPreviewProps = {
 	readonly onError: MediaOnError | undefined;
 };
 
-const AudioForPreviewAssertedShowing: React.FC<NewAudioForPreviewProps> = ({
+type AudioForPreviewAssertedShowingProps = NewAudioForPreviewProps & {
+	readonly controls: SequenceControls | undefined;
+};
+
+const AudioForPreviewAssertedShowing: React.FC<
+	AudioForPreviewAssertedShowingProps
+> = ({
 	src,
 	playbackRate,
 	logLevel,
@@ -72,6 +84,7 @@ const AudioForPreviewAssertedShowing: React.FC<NewAudioForPreviewProps> = ({
 	audioStreamIndex,
 	fallbackHtml5AudioProps,
 	onError,
+	controls,
 }) => {
 	const videoConfig = useUnsafeVideoConfig();
 	const frame = useCurrentFrame();
@@ -148,6 +161,7 @@ const AudioForPreviewAssertedShowing: React.FC<NewAudioForPreviewProps> = ({
 		loopDisplay,
 		trimAfter,
 		trimBefore,
+		controls,
 	});
 
 	const bufferingContext = useContext(Internals.BufferingContextReact);
@@ -158,13 +172,15 @@ const AudioForPreviewAssertedShowing: React.FC<NewAudioForPreviewProps> = ({
 		);
 	}
 
+	const effectiveMuted = muted || mediaMuted || userPreferredVolume <= 0;
+
 	const isPlayerBuffering = Internals.useIsPlayerBuffering(bufferingContext);
 	const initialPlaying = useRef(playing && !isPlayerBuffering);
 	const initialIsPremounting = useRef(isPremounting);
 	const initialIsPostmounting = useRef(isPostmounting);
 	const initialGlobalPlaybackRate = useRef(globalPlaybackRate);
 	const initialPlaybackRate = useRef(playbackRate);
-	const initialMuted = useRef(muted);
+	const initialMuted = useRef(effectiveMuted);
 
 	useEffect(() => {
 		if (!sharedAudioContext) return;
@@ -187,6 +203,7 @@ const AudioForPreviewAssertedShowing: React.FC<NewAudioForPreviewProps> = ({
 				isPostmounting: initialIsPostmounting.current,
 				isPremounting: initialIsPremounting.current,
 				globalPlaybackRate: initialGlobalPlaybackRate.current,
+				durationInFrames: videoConfig.durationInFrames,
 				onVideoFrameCallback: null,
 				playing: initialPlaying.current,
 			});
@@ -324,6 +341,7 @@ const AudioForPreviewAssertedShowing: React.FC<NewAudioForPreviewProps> = ({
 		disallowFallbackToHtml5Audio,
 		buffer,
 		onError,
+		videoConfig.durationInFrames,
 	]);
 
 	useLayoutEffect(() => {
@@ -355,8 +373,6 @@ const AudioForPreviewAssertedShowing: React.FC<NewAudioForPreviewProps> = ({
 		mediaPlayer.setTrimAfter(trimAfter, currentTimeRef.current);
 	}, [trimAfter, mediaPlayerReady]);
 
-	const effectiveMuted = muted || mediaMuted || userPreferredVolume <= 0;
-
 	useLayoutEffect(() => {
 		const audioPlayer = mediaPlayerRef.current;
 		if (!audioPlayer || !mediaPlayerReady) return;
@@ -379,7 +395,7 @@ const AudioForPreviewAssertedShowing: React.FC<NewAudioForPreviewProps> = ({
 			return;
 		}
 
-		audioPlayer.setPlaybackRate(playbackRate);
+		audioPlayer.setPlaybackRate(playbackRate, currentTimeRef.current);
 	}, [playbackRate, mediaPlayerReady]);
 
 	useLayoutEffect(() => {
@@ -408,6 +424,15 @@ const AudioForPreviewAssertedShowing: React.FC<NewAudioForPreviewProps> = ({
 
 		mediaPlayer.setLoop(loop);
 	}, [loop, mediaPlayerReady]);
+
+	useLayoutEffect(() => {
+		const mediaPlayer = mediaPlayerRef.current;
+		if (!mediaPlayer || !mediaPlayerReady) {
+			return;
+		}
+
+		mediaPlayer.setDurationInFrames(videoConfig.durationInFrames);
+	}, [videoConfig.durationInFrames, mediaPlayerReady]);
 
 	useLayoutEffect(() => {
 		const mediaPlayer = mediaPlayerRef.current;
@@ -477,7 +502,6 @@ type InnerAudioProps = {
 	readonly playbackRate?: number;
 	// Props we ignore but are passed from old usage
 	readonly _remotionInternalNativeLoopPassed?: boolean;
-	readonly _remotionInternalStack?: string | null;
 	readonly shouldPreMountAudioTags?: boolean;
 	readonly onNativeError?: React.ReactEventHandler<HTMLAudioElement>;
 	readonly onDuration?: (src: string, durationInSeconds: number) => void;
@@ -494,17 +518,37 @@ type InnerAudioProps = {
 	readonly onError?: MediaOnError;
 };
 
+const audioSchema = {
+	volume: {
+		type: 'number',
+		min: 0,
+		max: 20,
+		step: 0.01,
+		default: 1,
+		description: 'Volume',
+	},
+	playbackRate: {
+		type: 'number',
+		min: 0,
+		step: 0.01,
+		default: 1,
+		description: 'Playback Rate',
+	},
+	trimBefore: {type: 'number', min: 0, default: 0},
+	trimAfter: {type: 'number', min: 0, default: 0},
+} as const satisfies SequenceSchema;
+
 export const AudioForPreview: React.FC<InnerAudioProps> = ({
 	loop,
 	src,
 	logLevel,
 	muted,
 	name,
-	volume,
+	volume: volumeProp,
 	loopVolumeCurveBehavior,
-	playbackRate,
-	trimAfter,
-	trimBefore,
+	playbackRate: playbackRateProp,
+	trimAfter: trimAfterProp,
+	trimBefore: trimBeforeProp,
 	showInTimeline,
 	stack,
 	disallowFallbackToHtml5Audio,
@@ -513,6 +557,39 @@ export const AudioForPreview: React.FC<InnerAudioProps> = ({
 	fallbackHtml5AudioProps,
 	onError,
 }) => {
+	const schemaInput = useMemo(() => {
+		if (typeof volumeProp !== 'number') {
+			return null;
+		}
+
+		return {
+			volume: volumeProp,
+			playbackRate: playbackRateProp,
+			trimBefore: trimBeforeProp,
+			trimAfter: trimAfterProp,
+			loop: loop ?? false,
+		};
+	}, [volumeProp, playbackRateProp, trimBeforeProp, trimAfterProp, loop]);
+
+	const {controls, values} = Internals.useSchema(
+		schemaInput ? audioSchema : null,
+		schemaInput,
+	);
+
+	const volume = schemaInput !== null ? (values.volume as number) : volumeProp;
+	const playbackRate =
+		schemaInput !== null ? (values.playbackRate as number) : playbackRateProp;
+	const trimBefore =
+		schemaInput !== null
+			? (values.trimBefore as number | undefined)
+			: trimBeforeProp;
+	const trimAfter =
+		schemaInput !== null
+			? (values.trimAfter as number | undefined)
+			: trimAfterProp;
+	const effectiveLoop =
+		schemaInput !== null ? (values.loop as boolean) : (loop ?? false);
+
 	const preloadedSrc = usePreload(src);
 
 	const defaultLogLevel = Internals.useLogLevel();
@@ -525,7 +602,7 @@ export const AudioForPreview: React.FC<InnerAudioProps> = ({
 			getTimeInSeconds({
 				unloopedTimeInSeconds: currentTime,
 				playbackRate: playbackRate ?? 1,
-				loop: loop ?? false,
+				loop: effectiveLoop,
 				trimBefore,
 				trimAfter,
 				mediaDurationInSeconds: Infinity,
@@ -536,7 +613,7 @@ export const AudioForPreview: React.FC<InnerAudioProps> = ({
 		);
 	}, [
 		currentTime,
-		loop,
+		effectiveLoop,
 		playbackRate,
 		src,
 		trimAfter,
@@ -557,7 +634,7 @@ export const AudioForPreview: React.FC<InnerAudioProps> = ({
 			muted={muted ?? false}
 			volume={volume ?? 1}
 			loopVolumeCurveBehavior={loopVolumeCurveBehavior ?? 'repeat'}
-			loop={loop ?? false}
+			loop={effectiveLoop}
 			trimAfter={trimAfter}
 			trimBefore={trimBefore}
 			name={name}
@@ -567,6 +644,7 @@ export const AudioForPreview: React.FC<InnerAudioProps> = ({
 			toneFrequency={toneFrequency}
 			onError={onError}
 			fallbackHtml5AudioProps={fallbackHtml5AudioProps}
+			controls={controls}
 		/>
 	);
 };
